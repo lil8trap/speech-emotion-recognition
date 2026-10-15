@@ -1,4 +1,4 @@
-
+import os
 import gradio as gr
 
 from src.model import EMOTIONS
@@ -73,5 +73,7 @@ with gr.Blocks(title="Speech Emotion Recognition") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
-
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("PORT", "7860"))
+    )
