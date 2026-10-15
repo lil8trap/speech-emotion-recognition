@@ -1,0 +1,12 @@
+{
+    "model": "Weighted PyTorch MLP",
+    "dataset": "RAVDESS speech",
+    "feature_count": 80,
+    "train_actors": "01-16",
+    "validation_actors": "17-20",
+    "test_actors": "21-24",
+    "test_samples": 240,
+    "test_accuracy": 0.3958333333333333,
+    "test_macro_f1": 0.3726892324093817,
+    "checkpoint_epoch": 91
+}

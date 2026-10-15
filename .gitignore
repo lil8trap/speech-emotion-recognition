@@ -1,0 +1,37 @@
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# macOS
+.DS_Store
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dataset and generated feature files
+data/
+*.wav
+*.mp3
+*.flac
+*.npz
+
+# Model weights and serialized objects
+*.pt
+*.pth
+*.pkl
+*.joblib
+
+# Temporary outputs
+*.log
+*.tmp
+/final_test_results.json
