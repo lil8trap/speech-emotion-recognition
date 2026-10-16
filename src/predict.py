@@ -1,4 +1,4 @@
-
+from time import perf_counter
 import argparse
 from functools import lru_cache
 from pathlib import Path
@@ -45,13 +45,23 @@ def load_model():
 
 
 def predict_emotion(audio_path):
-    """Predict an emotion from an audio recording."""
+    """Predict an emotion and measure processing time."""
 
+    total_start = perf_counter()
+
+    # Step 1: Load or retrieve cached model
+    start = perf_counter()
     model, mean, scale = load_model()
+    model_time = perf_counter() - start
 
+    # Step 2: Extract acoustic features
+    start = perf_counter()
     features = extract_features(audio_path)
+    feature_time = perf_counter() - start
 
-    # Use the exact scaling parameters from training.
+    # Step 3: Scale features and run inference
+    start = perf_counter()
+
     features = (features - mean) / scale
 
     x = torch.as_tensor(
@@ -63,11 +73,30 @@ def predict_emotion(audio_path):
         probabilities = torch.softmax(logits, dim=1)[0]
 
     predicted_id = int(probabilities.argmax().item())
+    result = probabilities.numpy()
 
-    return (
-        EMOTIONS[predicted_id],
-        probabilities.numpy()
+    inference_time = perf_counter() - start
+    total_time = perf_counter() - total_start
+
+    print(
+        f"[PERFORMANCE] Model loading: {model_time:.3f}s",
+        flush=True
     )
+    print(
+        f"[PERFORMANCE] Feature extraction: {feature_time:.3f}s",
+        flush=True
+    )
+    print(
+        f"[PERFORMANCE] Inference: {inference_time:.3f}s",
+        flush=True
+    )
+    print(
+        f"[PERFORMANCE] Total prediction: {total_time:.3f}s",
+        flush=True
+    )
+
+    return EMOTIONS[predicted_id], result
+
 
 
 def main():
