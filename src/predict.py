@@ -1,6 +1,8 @@
 
 import argparse
+from functools import lru_cache
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 import torch
@@ -18,8 +20,9 @@ MODEL_PATH = (
 )
 
 
+@lru_cache(maxsize=1)
 def load_model():
-    """Load the trained classifier and scaling parameters."""
+    """Load the trained classifier once per Python process."""
 
     checkpoint = torch.load(
         MODEL_PATH,
@@ -29,7 +32,6 @@ def load_model():
 
     model = EmotionClassifier()
 
-    # Original checkpoint came from nn.Sequential.
     model.network.load_state_dict(
         checkpoint["model_state"]
     )
@@ -49,19 +51,18 @@ def predict_emotion(audio_path):
 
     features = extract_features(audio_path)
 
-    # Apply scaling learned from training data
+    # Use the exact scaling parameters from training.
     features = (features - mean) / scale
 
-    x = torch.tensor(
-        features,
-        dtype=torch.float32
+    x = torch.as_tensor(
+        np.asarray(features, dtype=np.float32)
     ).unsqueeze(0)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         logits = model(x)
         probabilities = torch.softmax(logits, dim=1)[0]
 
-    predicted_id = probabilities.argmax().item()
+    predicted_id = int(probabilities.argmax().item())
 
     return (
         EMOTIONS[predicted_id],
@@ -81,16 +82,24 @@ def main():
 
     args = parser.parse_args()
 
+    start = perf_counter()
+
     emotion, probabilities = predict_emotion(args.audio)
+
+    elapsed = perf_counter() - start
 
     print("\nPredicted emotion:", emotion)
 
     print("\nEmotion probabilities:")
+
     for label, probability in zip(
         EMOTIONS, probabilities
     ):
         print(f"{label}: {probability * 100:.2f}%")
 
+    print(f"\nPrediction time: {elapsed:.2f} seconds")
+
 
 if __name__ == "__main__":
     main()
+
