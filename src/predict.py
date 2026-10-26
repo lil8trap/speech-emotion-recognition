@@ -1,4 +1,3 @@
-from time import perf_counter
 import argparse
 from functools import lru_cache
 from pathlib import Path
