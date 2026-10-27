@@ -10,10 +10,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 
-from src.model import EMOTIONS
-from src.predict import predict_emotion
-
-
+from src.predict_onnx import EMOTIONS, predict_emotion
 # --------------------------------------------------
 # Configuration
 # --------------------------------------------------

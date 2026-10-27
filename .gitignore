@@ -35,3 +35,8 @@ data/
 *.log
 *.tmp
 /final_test_results.json
+
+# Deployment virtual environment
+.venv-render/
+
+# Local ONNX exporter artifacts
