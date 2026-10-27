@@ -1,148 +1,205 @@
-# Speech Emotion Recognition with PyTorch
+#  Speech Emotion Recognition — PyTorch & ONNX Runtime
+It's an end-to-end machine learning application that categorizes the vocal expression into 8 emotion categories using audio feature extraction, training of a neural network with PyTorch and ONNX Runtime for lightweight inference.
 
-An eight-class speech emotion recognition system built with PyTorch, Librosa, NumPy, and scikit-learn.
+**[Try the Live Demo](https://speech-emotion-recognition-pytorch.onrender.com)** · **[ Architecture Diagram](docs/architecture.md)**
 
-The project extracts acoustic features from speech recordings, trains neural-network classifiers, compares them against an SVM baseline, and evaluates performance on previously unseen speakers.
+
+## Overview
+
+This project is a walk through of building and deploying an audio classification system, starting fromfeature engineering, training a neural network, optimizing the inferences and creating an interactive web interface.
+
+Users can record their voice using the microphone, or upload an audio file. The application extracts acoustic features and predicts an emotion along with scores for eight emotion classes.
+
+Model was trained on the RAVDESS acted-speech data set. It is a trial and trial only, and cannot be used as a gauge of the real emotional condition of any particular individual.
 
 ## Features
 
-- Speech emotion classification across eight categories
-- MFCC-based audio feature extraction
-- PyTorch multilayer perceptron (MLP)
-- Class-weighted cross-entropy loss
-- Early stopping and model checkpointing
-- Speaker-independent evaluation
-- Command-line inference
-- Automated pipeline tests
+- Record audio and upload files using a microphone via Gradio.
+- The classification of the eight classes of speech emotion.
+- The features used are extracted using 80 MFCC features. 
+- Neural network trained with PyTorch
+- Infers without the need of PyTorch in production.  
+- Ensure that the audio length and file size are correct.
+- Check the length of the audio files and filesize. 
+- Visualization of scores and progress feedback based on emotions.  
+- Automated unit tests
+- Deployment on Render
 
-## Dataset
+## Technology Stack
 
-This project uses the RAVDESS speech dataset, consisting of 1,440 audio recordings from 24 actors.
+| Category | Technologies |
+|---|---|
+| Language | Python |
+| Model training | PyTorch |
+| Production inference | ONNX Runtime |
+| Audio processing | Librosa, SoundFile, NumPy |
+| Machine learning | scikit-learn |
+| Web interface | Gradio |
+| Hosting | Render |
+| Version control | Git, GitHub |
 
-The emotion categories are neutral, calm, happy, sad, angry, fearful, disgust, and surprised.
+## System Architecture
 
-To reduce speaker leakage, recordings were partitioned by actor:
+```mermaid
+flowchart TD
+    A["Microphone / Audio Upload"]
+    B["Gradio Interface and Audio Validation"]
+    C["Librosa Audio Processing"]
+    D["40 MFCC Coefficients"]
+    E["Mean + Standard Deviation = 80 Features"]
+    F["Saved Feature Scaling"]
+    G["ONNX Neural Network"]
+    H["Softmax: Eight Emotion Scores"]
+    I["Prediction and Visualization"]
 
-| Partition | Actors | Recordings |
-|---|---|---:|
-| Training | 01–16 | 960 |
-| Validation | 17–20 | 240 |
-| Test | 21–24 | 240 |
-
-The dataset is not distributed with this repository.
-
-## Feature Engineering
-
-Each recording is loaded at a sample rate of 22,050 Hz. Librosa extracts 40 Mel-frequency cepstral coefficients (MFCCs).
-
-For each coefficient, its mean and standard deviation across time are calculated, producing 80 features per recording.
-
-A StandardScaler is fitted using only the training partition. The resulting parameters are reused during validation, testing, and inference.
-
-## Neural Network Architecture
-
-The classifier is a fully connected multilayer perceptron:
-
-```text
-Input: 80 features
-    ↓
-Linear(80, 64)
-    ↓
-ReLU
-    ↓
-Linear(64, 32)
-    ↓
-ReLU
-    ↓
-Linear(32, 8)
-    ↓
-8 emotion logits
+    A --> B --> C --> D --> E --> F --> G --> H --> I
 ```
 
-The selected model was trained with Adam, a learning rate of 0.001, class-weighted cross-entropy loss, and early stopping with patience of 30 epochs.
+For component responsibilities and deployment architecture, see the **[architecture documentation](docs/architecture.md)**.
 
-## Results
+## Model Architecture
 
-### Validation experiments
+The fully connected neural network has the following structure:
 
-| Model | Accuracy | Macro-F1 |
+| Layer | Configuration |
+|---|---|
+| Input | 80 MFCC-derived features |
+| Hidden layer 1 | 64 neurons, ReLU |
+| Hidden layer 2 | 32 neurons, ReLU |
+| Output | 8 emotion classes |
+
+The labels that are there are neutral, calm, happy, sad, angry, fearful, disgusted, and surprised. Themodel takes in standardised features. ONNX Runtime produces logits during inference and then appliessoftmax to compute class scores.
+
+## Evaluation
+
+**Held-out speaker test accuracy: 39.58%.**
+
+This was obtained by taking speakers out of the RAVDESS acted-speech database.
+
+The evaluation shows how challenging is the generalisation of speech emotion classification across speakers. A high rating on one of the predictions is not proof of the emotion being right.
+
+The application is designed to be a machine learning engineering demonstration, and not a psychological assessment or production emotion-detection system.
+
+## Optimizing Deployment Memory
+
+PyTorch was used for the original application for training and inference. The application restarted due to memory on Render's free instance.
+
+The trained network was exported to ONNX and connected with ONNX Runtime to decrease the runtime memory requirement.
+
+The conversion was benchmarked with PyTorch with the same model inputs.
+
+**Local measurements:**
+
+| Measurement | PyTorch | ONNX Runtime |
 |---|---:|---:|
-| 40-feature linear SVM | 30.00% | 0.2611 |
-| 40-feature PyTorch MLP | 30.00% | 0.2351 |
-| 80-feature linear SVM | 40.42% | 0.3903 |
-| 80-feature PyTorch MLP | 46.25% | 0.4075 |
-| 80-feature weighted PyTorch MLP | 45.00% | 0.4246 |
+| Process memory after model loading | 205.5 MB | 52.2 MB |
+| Process memory after sample prediction | 319.5 MB | 181.1 MB |
 
-The class-weighted model was selected based on validation macro-F1.
+These are not peak memory measurements, but are measurements of Mac OS processes. They are not guaranteed to have the same impact on the Linux deployment.
 
-### Held-out test evaluation
+The difference between the logits of the numerical conversion test was approximately 7.15e-7; all of the test inputs had matching predicted classes.
 
-The selected model was evaluated on 240 recordings from actors 21–24.
+## Run Locally
 
-**Test accuracy: 39.58%**
+Clone the repository:
 
-**Test macro-F1: 0.3727**
+```bash
+git clone https://github.com/lil8trap/speech-emotion-recognition-pytorch.git
+cd speech-emotion-recognition-pytorch
+```
 
-Performance varied substantially across emotion classes. The model achieved its strongest recall for surprised speech and struggled most with sad speech.
-
-These results are from one speaker-independent partition, not repeated cross-validation.
-
-## Limitations
-
-- The RAVDESS dataset contains acted emotions rather than spontaneous everyday speech.
-- Averaged MFCC statistics discard temporal ordering.
-- Performance varies across speakers and emotion classes.
-- Softmax probabilities are not necessarily calibrated confidence estimates.
-- Performance on the RAVDESS dataset does not establish reliability on real-world recordings.
-
-## Installation
-
-The project was developed using Python 3.14 on macOS.
+Create a virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 ```
 
-The recorded dependency versions are from the development environment; fresh-environment installation remains to be verified.
-
-## Running Predictions
-
-After placing the trained checkpoint at `models/emotion_nn_80_weighted_checkpoint.pt`, run:
+Install the lightweight inference dependencies:
 
 ```bash
-python -m src.predict path/to/audio.wav
+python -m pip install -r requirements-render.txt
 ```
 
-The program displays the predicted emotion and softmax scores for all eight categories.
+Launch the web application:
 
-The trained checkpoint is not currently distributed with the repository.
+```bash
+python app.py
+```
 
-## Automated Tests
+Open `http://127.0.0.1:7860` in your browser.
 
-Run:
+For model development, use the dependencies in `requirements.txt`, which include PyTorch.
+
+## Testing
+
+Run the automated tests using the full development environment:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Five automated tests cover model output dimensions, emotion labels, feature extraction, checkpoint loading, and end-to-end inference.
+The existing suite includes seven tests covering feature extraction, checkpoint loading, classifier outputs, emotion labels, and end-to-end inference.
 
-The inference-related tests require access to the checkpoint and a sample RAVDESS recording. The dataset and checkpoint are excluded from version control.
+## Project Structure
 
-## Future Work
+```text
+speech-emotion-recognition-pytorch/
+├── app.py
+├── src/
+│   ├── features.py
+│   ├── model.py
+│   ├── predict.py
+│   ├── predict_onnx.py
+│   ├── train.py
+│   ├── evaluate.py
+│   └── prepare_data.py
+├── models/
+│   ├── emotion_classifier.onnx
+│   ├── emotion_classifier.onnx.data
+│   ├── emotion_scaler.npz
+│   └── emotion_nn_80_weighted_checkpoint.pt
+├── docs/
+│   └── architecture.md
+├── tests/
+│   └── test_pipeline.py
+├── export_onnx.py
+├── compare_onnx.py
+├── requirements.txt
+└── requirements-render.txt
+```
 
-- Consolidate training and evaluation into reusable scripts.
-- Compare performance across multiple speaker-independent splits.
-- Experiment with temporal audio architectures such as convolutional networks.
-- Improve reproducibility and checkpoint distribution.
-- Investigate model calibration and robustness on external speech data.
+## Deployment
 
-## Technology Stack
+The application is deployed as a Python web service on Render.
 
-Python, PyTorch, Librosa, NumPy, scikit-learn, SoundFile.
+Build command:
 
-## Project Status
+```bash
+pip install -r requirements-render.txt
+```
 
-Research prototype with completed held-out evaluation, working local inference, and basic automated tests. Reproducibility and repository packaging are ongoing.
+Start command:
+
+```bash
+python app.py
+```
+The application uses the value of the environment variable PORT set by Render to read the server port.
+
+The startup warmup is not mandatory and will be disabled by default if the parameter ENABLE_WARMUP=0.
+
+The delays after inactivity can be caused by free hosting.
+
+## Limitations and Future Improvements
+
+- Add more training data and experiment with models to enhance speaker-independent generalization
+- Test out the performance in various accents, mics and recording environments
+- Enhance the skill of prediction calibration and communication of confidence.
+- Scale up automated testing of ONNX deployment path.
+- Continue to track memory usage/cold start behavior
+
+## Author
+
+Developed as a personal machine learning and software engineering portfolio project.
+
+**GitHub:** [lil8trap](https://github.com/lil8trap)
